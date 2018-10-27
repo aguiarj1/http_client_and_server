@@ -72,12 +72,17 @@ int main(int argc, char** argv) {
 // OUTPUT: void. 
 void extractInfo(char* s, string* portno, string* hostname, string* page){
    const char delim[2] = "/";
+   char lastChar = s[strlen(s)-1];
+   cerr << "LAST CHARACTER: " << lastChar << endl;
+   
    char *token;
    token = strtok(s, delim);
    cerr << "TOKEN: "; 
    int count = 0; 
    string hnString = "";  
-   while( token != NULL || count ==3) {
+   string pgString = "/";
+   string prString = "";  
+   while( token != NULL) {
          //string currentString(token); 
          //char key[100];  
          //sscanf(token, "%s", key);
@@ -86,22 +91,50 @@ void extractInfo(char* s, string* portno, string* hostname, string* page){
          //   cerr << "FOUND IT: " << lengthOfMessage << endl;
          //}
          
-         printf( " %s\n", token);
+         //printf( " %s\n", token);
          if(count ==0){
-            hnString += token; 
-            hnString += "//";
+            //hnString += token; 
+            //hnString += "//";
          } else if (count ==1){
             hnString += token; 
+         } else if (count >= 2){
+           pgString += token;
+           pgString += "/"; 
          }
          
          token = strtok(NULL, delim);
          count++;
    }
+   if(lastChar != '/'){
+      cerr << "inside lastChar if statement" << endl;
+      //hnString.erase(10, 1);
+      cerr << "BEFORE: " << pgString << endl; 
+      pgString.pop_back();
+      cerr << "AFTER: " << pgString << endl;
+      
+   }   
+ 
+   string val = ":";
+   size_t found = hnString.find(val,5);
+   cerr << "found: " << found << endl; 
+   if(found == string::npos){
+       prString = "80";
+   } 
 
    char hn[hnString.size()+1];
    strcpy(hn, hnString.c_str());
    *hostname = hn;
 
+   
+   char pg[pgString.size()+1];
+   strcpy(pg, pgString.c_str());
+   *page = pg;
+
+   char pr[prString.size()+1];
+   strcpy(pr, prString.c_str());
+   *portno = pr;
+
+   
 
    /*
    *page = "/joelaguiar.com/"; //FIXME
@@ -231,16 +264,26 @@ string getMessage(){
 }  
 
 void getPayload(int newsockfd, int size){
-   int n = 0; 
+   int n = 0; //FIXME
    char buffer[BUFFER_SIZE];
    bzero(buffer, BUFFER_SIZE);
-   string test; //FIXME
-   cin >> test;    //FIXME
+   int index = 0; 
    while(n < size){
-      n+= read(newsockfd, (buffer+n), 1); 
+      n+= read(newsockfd, (buffer+index), 1);
+      index += 1; 
+      if(index == BUFFER_SIZE){
+         //cerr << "N: " << n << endl;
+         //string test; 
+         //cin >> test; 
+         for(int i=0; i< index; i++){
+            cout << buffer[i];
+         } 
+         bzero(buffer, BUFFER_SIZE);
+         index =0;     
+      }
    }
    
-   for(int i=0; i< n; i++){
+   for(int i=0; i< index; i++){
       cout << buffer[i];
    } 
 }
