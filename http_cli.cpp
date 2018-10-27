@@ -24,14 +24,14 @@
 using namespace std; 
 
 int establishConnection(string, string);
-void communicate(int, string); 
+void communicate(int, string, string); 
 string getMessage();
-void sendMessage(int, string);
+void requestResource(int, string, string);
 string receiveCommunication(int); 
 string getSize(string); 
-void extractInfo(string, string*, string*);
+void extractInfo(string, string*, string*, string*);
 
-int const BUFFER_SIZE = 150; 
+int const BUFFER_SIZE = 1000; 
 
 // DESCRIPTION: the main method uses the command line arguments and other
 // methods to communicate wit the server. 
@@ -39,21 +39,27 @@ int const BUFFER_SIZE = 150;
 //       argv- the command line arguments
 // OUTPUT: returns int - exit status
 int main(int argc, char** argv) {
+   /*
    string message = getMessage(); 
    const int MAXIMUM_MESSAGE_SIZE = 127; 
    if(message.size() > MAXIMUM_MESSAGE_SIZE){
-      cout << "ERROR: your message must be equal"<< 
+      cerr << "ERROR: your message must be equal"<< 
             " or less than 127 characters. Your"<<
             " message length is " << message.size() << ".\n"; 
       return 0;
-   }  
+   } 
+   */ 
    string portno;
    string hostname;
-   extractInfo(argv[1], &portno, &hostname); 
+   string page; 
+   extractInfo(argv[1], &portno, &hostname, &page); 
+   cerr <<  "DEBUG: portno: " << portno << " hostname: " << hostname << 
+            " page: " << page << endl; 
    //establish connection with server
    int sockfd = establishConnection(portno, hostname);
    //communicate with server
-   communicate(sockfd, message);
+   communicate(sockfd, hostname, page);
+   if(sockfd == 0) {}; //FIXME
    return 0;
 }
 
@@ -62,10 +68,13 @@ int main(int argc, char** argv) {
 //       portno- a string pointer that will hold the port number. 
 //       hostname- a string pointer that wil hold the hostname
 // OUTPUT: void. 
-void extractInfo(string s, string* portno, string* hostname){
+void extractInfo(string s, string* portno, string* hostname, string* page){
+   *page = "/about/mission-history/"; //FIXME
    bool on = true; 
-   string host = ""; 
+   //bool portFinished = false; 
+   string apge = "";  
    string port = ""; 
+   string host = "";
    for(unsigned int i=0; i<s.size(); i++){
       if(s.at(i) == ':'){
          on = false; 
@@ -109,19 +118,19 @@ int establishConnection(string portno, string hostname){
 
    int s = getaddrinfo(hname, pon, &hints, &result); 
    if(s != 0){
-      cout << "ERROR: with getaddrinfo" << endl;
+      cerr << "ERROR: with getaddrinfo" << endl;
       exit(0);
    }
    int sockfd = socket(result->ai_family, 
                result->ai_socktype, 
                result->ai_protocol);
    if(sockfd == -1){
-      cout << "ERROR opening socket" << endl; 
+      cerr << "ERROR opening socket" << endl; 
       exit(0);
    }
 
     if(connect(sockfd, result->ai_addr, result->ai_addrlen) <0){
-      cout << "ERROR connecting" << endl; 
+      cerr << "ERROR connecting" << endl; 
       exit(0);
    }  
    
@@ -132,14 +141,10 @@ int establishConnection(string portno, string hostname){
 // INPUT: sockfd- socket
 //       message- the message that will be sent
 // OUTPUT: void
-void communicate(int sockfd, string message){
-   string size = getSize(message); 
-   string sizeOfsize = getSize(size);
-   sendMessage(sockfd, sizeOfsize); 
-   sendMessage(sockfd, size); 
-   sendMessage(sockfd, message); 
+void communicate(int sockfd, string hostname, string page){
+   requestResource(sockfd, hostname, page); 
    string response = receiveCommunication(sockfd); 
-   cout << response; 
+   cerr << response << endl; 
    
 }
 
@@ -160,7 +165,12 @@ string getSize(string message){
 // INPUT: sockfd - socket
 //       message - the characters that will be sent
 // OUTPUT: void
-void sendMessage(int sockfd, string message){
+void requestResource(int sockfd, string hostname, string page){
+   //write message
+   string message =  "GET " + page + " HTTP/1.1\r\n" +
+                     "Host: " + hostname + "\r\n" +
+                     "Connection: close\r\n\r\n"; 
+   cerr << message << endl;   
    unsigned int n =0;  
    char buffer[BUFFER_SIZE]; 
    bzero(buffer,BUFFER_SIZE);
@@ -168,7 +178,7 @@ void sendMessage(int sockfd, string message){
    while(n < message.size()){
       n += write(sockfd,buffer, message.size());
       if(n<0) {
-         cout << "ERROR: writing to socket" << endl;
+         cerr << "ERROR: writing to socket" << endl;
       }
    }
 
@@ -190,7 +200,30 @@ string getMessage(){
 // INPUT: newsockfd - socket that is used to receive message
 // OUPUT: string that is the message received from the server. 
 string receiveCommunication(int newsockfd){
-
+      cerr << "DEBUG: in receiveCommunication" << endl; 
+      char buffer[BUFFER_SIZE];
+      bzero(buffer, BUFFER_SIZE);
+      int n = 0; 
+      int doneReadingHeader =0; 
+      string response = ""; 
+      do{
+         n += read(newsockfd,(buffer+n), 1); 
+         //FIXME if buffer overflow then do something
+         if(buffer[n-1] == '\n' && doneReadingHeader == 0){
+            doneReadingHeader = 1; 
+         } else if (buffer[n-1] == '\r' && doneReadingHeader == 1){
+            doneReadingHeader = 2;
+         } else if (buffer[n-1] == '\n' && doneReadingHeader ==2){
+            doneReadingHeader = 3; 
+         } else {
+            doneReadingHeader = 0; 
+         }
+      } while(doneReadingHeader <3);
+      cerr << "N: " << n << endl; 
+      for(int i=0; i< n; i++){
+         response += buffer[i];
+      }    
+      /*
       char buffer[BUFFER_SIZE];
       bzero (buffer, BUFFER_SIZE);
       int n =0; //number of bytes that represent the number of bytes of size
@@ -199,7 +232,7 @@ string receiveCommunication(int newsockfd){
       while(m < 1){
          m += read(newsockfd, (buffer), 1); 
          if(m < 0) {
-            cout << "ERROR: reading socket" << endl; 
+            cerr << "ERROR: reading socket" << endl; 
             exit(0);
          }
       }
@@ -209,7 +242,7 @@ string receiveCommunication(int newsockfd){
       while(i < sizeOfSize){
          i += read(newsockfd, (buffer+i), 1);
          if(i < 0){
-            cout << "ERROR: reading socket" << endl; 
+            cerr << "ERROR: reading socket" << endl; 
             exit(0);
          } 
       }
@@ -228,5 +261,6 @@ string receiveCommunication(int newsockfd){
       for(int i=0; i<sizeOfMessage; i++){
          message += buffer[i];
       }
-      return message;
+      */
+      return response;
 }

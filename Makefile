@@ -1,13 +1,9 @@
-CLIENT = warmup_cli
-SERVER = warmup_svr
+CLIENT = http_cli
 
-all: $(CLIENT) $(SERVER)
+all: $(CLIENT)
 
 $(CLIENT): $(CLIENT).cpp
 	g++ -g -Wall -Werror -o $@ $^
 
-$(SERVER): $(SERVER).cpp
-	g++ -g -Wall -Werror -o $@ $^
-
 clean:
-	rm -f *.o $(CLIENT) $(SERVER)
+	rm -f *.o $(CLIENT)
