@@ -27,11 +27,13 @@ int establishConnection(string, string);
 void communicate(int, string, string); 
 string getMessage();
 void requestResource(int, string, string);
-string receiveCommunication(int); 
+int getHeader(int); 
 string getSize(string); 
 void extractInfo(string, string*, string*, string*);
+void getPayload(int, int);
 
-int const BUFFER_SIZE = 1000; 
+
+int const BUFFER_SIZE = 2000; 
 
 // DESCRIPTION: the main method uses the command line arguments and other
 // methods to communicate wit the server. 
@@ -69,7 +71,7 @@ int main(int argc, char** argv) {
 //       hostname- a string pointer that wil hold the hostname
 // OUTPUT: void. 
 void extractInfo(string s, string* portno, string* hostname, string* page){
-   *page = "/about/mission-history/"; //FIXME
+   *page = "/joelaguiar.com/"; //FIXME
    bool on = true; 
    //bool portFinished = false; 
    string apge = "";  
@@ -143,8 +145,9 @@ int establishConnection(string portno, string hostname){
 // OUTPUT: void
 void communicate(int sockfd, string hostname, string page){
    requestResource(sockfd, hostname, page); 
-   string response = receiveCommunication(sockfd); 
+   int response = getHeader(sockfd); 
    cerr << response << endl; 
+   getPayload(sockfd, response);  
    
 }
 
@@ -194,18 +197,33 @@ string getMessage(){
    return message; 
 }  
 
+void getPayload(int newsockfd, int size){
+   int n = 0; 
+   char buffer[BUFFER_SIZE];
+   bzero(buffer, BUFFER_SIZE);
+   string test; 
+   cin >> test;    
+   while(n < size){
+      n+= read(newsockfd, (buffer+n), 1); 
+      cerr << "n: " << n << endl; 
+   }
+   
+   for(int i=0; i< n; i++){
+      cout << buffer[i];
+   } 
+}
 
 // DESCRIPTION: this method receives communication from the server. It reads 
 // in the corect format to be able to interpret the message. 
 // INPUT: newsockfd - socket that is used to receive message
 // OUPUT: string that is the message received from the server. 
-string receiveCommunication(int newsockfd){
-      cerr << "DEBUG: in receiveCommunication" << endl; 
+int getHeader(int newsockfd){
+      cerr << "DEBUG: in getHeader" << endl; 
       char buffer[BUFFER_SIZE];
       bzero(buffer, BUFFER_SIZE);
       int n = 0; 
       int doneReadingHeader =0; 
-      string response = ""; 
+      string header = ""; 
       do{
          n += read(newsockfd,(buffer+n), 1); 
          //FIXME if buffer overflow then do something
@@ -221,8 +239,30 @@ string receiveCommunication(int newsockfd){
       } while(doneReadingHeader <3);
       cerr << "N: " << n << endl; 
       for(int i=0; i< n; i++){
-         response += buffer[i];
-      }    
+         header += buffer[i];
+      }       
+      cerr << header; 
+     
+      char str[n]; //FIXME bad name
+      strcpy(str, header.c_str());
+ 
+      //extract the number of bytes of body
+      const char s[3] = "\r\n";
+      char *token;
+      token = strtok(str, s); 
+      char lengthFlag[16] = "Content-Length:";
+      int lengthOfMessage;
+      while( token != NULL) {
+         //printf( " %s\n", token);
+         string currentString(token); 
+         char key[100];  
+         sscanf(token, "%s", key);
+         if(strcmp(key,lengthFlag) == 0){
+            sscanf(token, "%s %d", key,&lengthOfMessage);
+            cerr << "FOUND IT: " << lengthOfMessage << endl;
+         }
+         token = strtok(NULL, s);
+      }
       /*
       char buffer[BUFFER_SIZE];
       bzero (buffer, BUFFER_SIZE);
@@ -262,5 +302,5 @@ string receiveCommunication(int newsockfd){
          message += buffer[i];
       }
       */
-      return response;
+      return lengthOfMessage;
 }
