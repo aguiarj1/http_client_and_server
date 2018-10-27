@@ -29,11 +29,11 @@ string getMessage();
 void requestResource(int, string, string);
 int getHeader(int); 
 string getSize(string); 
-void extractInfo(string, string*, string*, string*);
+void extractInfo(char*, string*, string*, string*);
 void getPayload(int, int);
 
 
-int const BUFFER_SIZE = 2000; 
+int const BUFFER_SIZE = 3000; 
 
 // DESCRIPTION: the main method uses the command line arguments and other
 // methods to communicate wit the server. 
@@ -70,11 +70,43 @@ int main(int argc, char** argv) {
 //       portno- a string pointer that will hold the port number. 
 //       hostname- a string pointer that wil hold the hostname
 // OUTPUT: void. 
-void extractInfo(string s, string* portno, string* hostname, string* page){
+void extractInfo(char* s, string* portno, string* hostname, string* page){
+   const char delim[2] = "/";
+   char *token;
+   token = strtok(s, delim);
+   cerr << "TOKEN: "; 
+   int count = 0; 
+   string hnString = "";  
+   while( token != NULL || count ==3) {
+         //string currentString(token); 
+         //char key[100];  
+         //sscanf(token, "%s", key);
+         //if(strcmp(key,lengthFlag) == 0){
+         //   sscanf(token, "%s %d", key,&lengthOfMessage);
+         //   cerr << "FOUND IT: " << lengthOfMessage << endl;
+         //}
+         
+         printf( " %s\n", token);
+         if(count ==0){
+            hnString += token; 
+            hnString += "//";
+         } else if (count ==1){
+            hnString += token; 
+         }
+         
+         token = strtok(NULL, delim);
+         count++;
+   }
+
+   char hn[hnString.size()+1];
+   strcpy(hn, hnString.c_str());
+   *hostname = hn;
+
+
+   /*
    *page = "/joelaguiar.com/"; //FIXME
    bool on = true; 
    //bool portFinished = false; 
-   string apge = "";  
    string port = ""; 
    string host = "";
    for(unsigned int i=0; i<s.size(); i++){
@@ -95,6 +127,7 @@ void extractInfo(string s, string* portno, string* hostname, string* page){
    strcpy(p, port.c_str());
    *portno = p; 
    *hostname = h;  
+   */
 }
 
 // DESCRIPTION: This method creates uses getaddrinfo to produce a socket to 
@@ -201,11 +234,10 @@ void getPayload(int newsockfd, int size){
    int n = 0; 
    char buffer[BUFFER_SIZE];
    bzero(buffer, BUFFER_SIZE);
-   string test; 
-   cin >> test;    
+   string test; //FIXME
+   cin >> test;    //FIXME
    while(n < size){
       n+= read(newsockfd, (buffer+n), 1); 
-      cerr << "n: " << n << endl; 
    }
    
    for(int i=0; i< n; i++){
