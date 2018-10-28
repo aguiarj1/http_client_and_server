@@ -113,12 +113,25 @@ void extractInfo(char* s, string* portno, string* hostname, string* page){
       cerr << "AFTER: " << pgString << endl;
       
    }   
+   if (count < 3){
+      pgString += "/";
+   }
  
    string val = ":";
    size_t found = hnString.find(val,5);
    cerr << "found: " << found << endl; 
    if(found == string::npos){
        prString = "80";
+   }else{
+      char hnArray[hnString.size()+1];
+      strcpy(hnArray, hnString.c_str());
+      const char delim2[2] = ":";
+      char *token2;
+      token2 = strtok(hnArray, delim2);
+      hnString = token2;
+      token2 = strtok(NULL, delim2);
+      prString = token2;
+      cerr << "token2: " << prString << endl;
    } 
 
    char hn[hnString.size()+1];
