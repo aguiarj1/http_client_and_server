@@ -1,0 +1,207 @@
+Results for aguiarj1/ ...
+========================================
+=== ===
+
+ERROR: incorrect number of command line arguments
+
+--- Test finished with exit code 0 ---
+
+========================================
+=== http/badurl.com:blah ===
+
+ERROR: with getaddrinfo
+
+--- Test finished with exit code 0 ---
+
+========================================
+=== blah_no.colons-or ===
+
+ERROR: with getaddrinfo
+
+--- Test finished with exit code 0 ---
+/home/fac/lillethd/cpsc5510/grading/p1a/grade.sh: line 78: slashes: command not found
+
+========================================
+=== http://flask.pocoo.org/docs/1.0/index.html ===
+
+GET /docs/1.0/index.html HTTP/1.1
+Host: flask.pocoo.org
+Connection: close
+
+
+HTTP/1.1 200 OK
+Server: nginx
+Date: Wed, 07 Nov 2018 05:59:29 GMT
+Content-Type: text/html
+Content-Length: 40430
+Last-Modified: Fri, 25 May 2018 07:52:46 GMT
+Connection: close
+ETag: "5b07c0ce-9dee"
+Accept-Ranges: bytes
+
+
+
+
+--- Test finished with exit code 0 ---
+
+----- Diff -----
+----------------
+
+========================================
+=== http://flask.pocoo.org/ ===
+
+GET // HTTP/1.1
+Host: flask.pocoo.org
+Connection: close
+
+
+HTTP/1.1 200 OK
+Server: nginx
+Date: Wed, 07 Nov 2018 05:59:30 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 4840
+Connection: close
+
+
+
+
+--- Test finished with exit code 0 ---
+
+----- Diff -----
+----------------
+
+========================================
+=== http://www.example.com ===
+
+GET / HTTP/1.1
+Host: www.example.com
+Connection: close
+
+
+HTTP/1.1 200 OK
+Accept-Ranges: bytes
+Cache-Control: max-age=604800
+Content-Type: text/html; charset=UTF-8
+Date: Wed, 07 Nov 2018 05:59:30 GMT
+Etag: "1541025663"
+Expires: Wed, 14 Nov 2018 05:59:30 GMT
+Last-Modified: Fri, 09 Aug 2013 23:54:35 GMT
+Server: ECS (sec/96ED)
+Vary: Accept-Encoding
+X-Cache: HIT
+Content-Length: 1270
+Connection: close
+
+
+
+
+--- Test finished with exit code 0 ---
+
+----- Diff -----
+----------------
+
+========================================
+=== http://jinja.pocoo.org/docs/2.10 ===
+
+GET /docs/2.10 HTTP/1.1
+Host: jinja.pocoo.org
+Connection: close
+
+
+HTTP/1.1 301 Moved Permanently
+Server: nginx
+Date: Wed, 07 Nov 2018 05:59:31 GMT
+Content-Type: text/html
+Content-Length: 178
+Location: http://jinja.pocoo.org/docs/2.10/
+Connection: close
+
+
+
+
+--- Test finished with exit code 0 ---
+
+----- Diff -----
+----------------
+
+========================================
+=== http://flask.pocoo.org/notfound.html ===
+
+GET /notfound.html HTTP/1.1
+Host: flask.pocoo.org
+Connection: close
+
+
+HTTP/1.1 404 NOT FOUND
+Server: nginx
+Date: Wed, 07 Nov 2018 05:59:31 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 900
+Connection: close
+
+
+
+
+--- Test finished with exit code 0 ---
+
+----- Diff -----
+----------------
+
+========================================
+=== http://flask.pocoo.org/static/logo/flask.png ===
+
+GET /static/logo/flask.png HTTP/1.1
+Host: flask.pocoo.org
+Connection: close
+
+
+HTTP/1.1 200 OK
+Server: nginx
+Date: Wed, 07 Nov 2018 05:59:31 GMT
+Content-Type: image/png
+Content-Length: 213488
+Last-Modified: Wed, 09 Apr 2014 21:52:13 GMT
+Connection: close
+ETag: "5345c10d-341f0"
+Accept-Ranges: bytes
+
+
+
+
+--- Test finished with exit code 0 ---
+
+----- Diff -----
+----------------
+
+========================================
+=== http://ichef.bbci.co.uk/wwfeatures/976_549/images/live/p0/34/pb/p034pb0g.jpg ===
+
+GET /wwfeatures/976_549/images/live/p0/34/pb/p034pb0g.jpg HTTP/1.1
+Host: ichef.bbci.co.uk
+Connection: close
+
+
+HTTP/1.1 200 OK
+Expires: Sun, 04 Nov 2018 10:57:57 GMT
+Last-Modified: Thu, 08 Oct 2015 14:33:16 GMT
+ETag: "1251ce-52198be5c0300"
+Cache-Control: max-age=86400
+Server: Apache
+Accept-Ranges: bytes
+Content-Length: 51141
+Content-Type: image/jpeg
+Date: Wed, 07 Nov 2018 05:59:34 GMT
+Connection: close
+Access-Control-Allow-Headers: *
+Access-Control-Allow-Methods: HEAD,GET
+Access-Control-Allow-Credentials: false
+Access-Control-Max-Age: 300
+Access-Control-Allow-Origin: *
+
+
+
+
+--- Test finished with exit code 0 ---
+
+----- Diff -----
+----------------

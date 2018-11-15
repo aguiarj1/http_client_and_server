@@ -1,12 +1,12 @@
 // AUTHOR: Joel Aguiar
 // FILENAME: http_svr.cpp
-// DATE: 11/13/18
+// DATE: 11/14/18
 // REVISION HISTORY: submitted draft
 // REFERENCES: n/a
 //
 // DESCRIPTION: This is a http server program that communicates with a http 
-// client program. It waits for a client to submit a request it responds with
-// and appropriate header and, when applicable, a body.  
+// client program. It waits for a client to submit a request and it responds
+// with and appropriate header and, when applicable, a body.  
 
 #include "common.h"
 #include <sys/socket.h>
@@ -16,7 +16,6 @@
 #include <netdb.h>
 #include <string.h>
 #include <unistd.h>
-//#include <bits/stdc++.h> //to reverse
 #include <stdlib.h>   /* strtol */
 #include <fstream>
 #include <sys/stat.h>
@@ -30,15 +29,12 @@ void processBuffer(char*);
 void sendMessage(int, string); 
 void sendMessage(int, char*,int);
 string receiveHeader(int); 
-string getResourcePath(string); 
 string generateHeader(string, string, string); 
-string generateBody(int, string); 
+void sendBody(int, string); 
 string determineStatusCode(string, string &, string &); 
 bool checkFileExtension(string, string &);
 
 int const BUFFER_SIZE = 1000;
-//FIXME do i have to worry about hton()?????
-
 
 // DESCRIPTION: the main method uses a command line argument that represents
 // the port number and other methods to communicate with the client. 
@@ -57,8 +53,14 @@ int main(int argc, char** argv) {
 }
 
 
+// DESCRIPTION: This method parses the request line and determines what is the 
+// appropriate http reponse code. 
+// INPUT: message - contains the whole request header
+//       revPath - a string that represents the path of the resource
+//       contentType - the content type is parsed from the path
+// OUTPUT: a string that represents the numberical response code
 string determineStatusCode(string message, string &revPath, string &contentType){
-  //find where the first /r/n is and based on that get that substring
+  //get the request line
   size_t indexOfFirstLine = message.find("\r\n");
   if(indexOfFirstLine == string::npos){
       return "400";
@@ -74,7 +76,8 @@ string determineStatusCode(string message, string &revPath, string &contentType)
       if(countOfTokens ==0){ 
          //check if it a GET command
          if(strcmp(token, "GET") != 0){ 
-            return "501"; // not implemented
+            // not implemented
+            return "501";
          }
       } else if(countOfTokens ==1){  
          //check valid uri
@@ -91,14 +94,13 @@ string determineStatusCode(string message, string &revPath, string &contentType)
             return "404";
          } else {
             if((info.st_mode & S_IFMT) == S_IFREG) {
-               //check to see if it is a file
-               //if correct file extention
+               //check to see if it is a file ext supported
                if(checkFileExtension(path, contentType)){
                   return "200";
                } else {
                   return "501"; //not implemented for that file type
                }
-            } else { //it is not a regular file
+            } else { //it is a file path 
                if(lastValue == '/'){
                   revPath = revPath + "index.html";
                } else {
@@ -107,7 +109,7 @@ string determineStatusCode(string message, string &revPath, string &contentType)
                struct stat info2;
                char secondRevPath[revPath.size()];
                strcpy(secondRevPath, revPath.c_str()); 
-               if(stat(secondRevPath, &info2) != 0){ //verifies it can read the path
+               if(stat(secondRevPath, &info2) != 0){ //verify correct path
                   return "404";
                } else {
                   contentType = "text/html";
@@ -120,7 +122,7 @@ string determineStatusCode(string message, string &revPath, string &contentType)
       token = strtok(NULL, " "); 
    } 
    return "400";
-}
+} 
 // DESCRIPTION: this method listens and sends messages to client program
 // INPUT: sockfd- socket 
 // OUPUT:void
@@ -142,15 +144,23 @@ void respondToHTTPrequests(int sockfd){
       string header = generateHeader(path, statusCode,contentType);   
       sendMessage(newsockfd, header);  
       if(strcmp(statusCode.c_str(), "200") == 0){
-         string body = generateBody(newsockfd, path);  
+         sendBody(newsockfd, path);  
       }
       close(newsockfd);
    } 
 }
 
+// DESCRIPTION: This method checks whether the file extension referenced in
+// the path has been implemented in the program. If so, returns true, 
+// otherwise it returns false.
+// INPUT: path- the full path of the resource
+//       contentTpe - the content type being requested
+// OUTPUT: true if filetype implemented or false if not.
 bool checkFileExtension(string path, string &contentType){
-      int period = path.find(".");
-      //FIXME assumes it is positive
+      size_t period = path.find(".");
+      if(period == string::npos){
+         return false; 
+      }
       string fileExtension = path.substr(period+1); 
       if(fileExtension == "txt"){
             contentType = "text/plain";
@@ -175,6 +185,12 @@ bool checkFileExtension(string path, string &contentType){
       }
 }
 
+// DESCRIPTION: This method makes an appropriate response header based on the 
+// status code.  
+// INPUT: path - the path of the resource
+//       statusCode - the http status code
+//       contentType - the filetype of the resource
+// OUTPUT: a string representing the response header.  
 string generateHeader(string path, string statusCode, string contentType){
    string response = "";
    response += "HTTP/1.1 ";
@@ -184,8 +200,6 @@ string generateHeader(string path, string statusCode, string contentType){
       char buffer[200];
       strftime(buffer,200,"%a, %d %h %G %T %Z",ltm);
       string currTime(buffer);
-      
-
       struct stat sb; 
       char cPath[path.size()];
       strcpy(cPath, path.c_str());
@@ -200,12 +214,10 @@ string generateHeader(string path, string statusCode, string contentType){
       char buffer2[200];
       strftime(buffer2,200,"%a, %d %h %G %T %Z",ltm2);
       string lastModString(buffer2);
-     
-
       response +="200 OK\r\n";
       response += "Content-Length: ";
       response += to_string(length);
-      response += "\r\n"; //FIXME
+      response += "\r\n"; 
       response += "Date: ";
       response += currTime;
       response += "\r\n";
@@ -223,8 +235,7 @@ string generateHeader(string path, string statusCode, string contentType){
       response += "Content-Length: 0\r\n";
     } else if(strcmp(statusCode.c_str(), "400") == 0){
       response += "400 Bad Request\r\n"; 
-      response += "Content-Length: 0\r\n";
-  
+      response += "Content-Length: 0\r\n"; 
   } 
    response += "Connection: close\r\n";
    response += "\r\n";
@@ -232,15 +243,12 @@ string generateHeader(string path, string statusCode, string contentType){
    return response; 
 }
 
-string generateBody(int sockfd, string path){
-   //FIXME when they don't provide file name I have to provide
-   //FIXME watch out for backslaces... do I need two?
-   //get length of file:
-   //send the file in parts that fit in the buffer 
-   //FIXME assumes it is greater 
-   //FIXME body is not necessarily a string 
+// DESCRIPTION: This method sends the content of the resource seeked to the 
+// client.
+// INPUT: sockfd- socket used to communicate with client
+//       path - path of the resource
+void sendBody(int sockfd, string path){
    fstream file;
-   //const int SIZE = 1;
    char data;
    file.open(path, ios::in | ios::binary);
    if(file.is_open()){
@@ -253,44 +261,14 @@ string generateBody(int sockfd, string path){
             exit(0);
          }
          file.read(&data,1);
-
       }
    } else {
-      cerr << "couln't open file" << endl; 
-
+      cerr << "couln't open file" << endl;
+      exit(0);
    }
-   cerr << endl;
-   return "TEST BODY";
 
 }
 
-
-// DESCRIPTION: this method reverses the order of a string
-// INPUT: message- the string that will be reversed. 
-// OUTPUT: the reversed string. 
-string getResourcePath(string message){
-   char cMessage[message.size()+1];
-   strcpy(cMessage, message.c_str());
-   string path = "";  
-   //parse message for what I need to return
-   int result = message.find("GET", 0);
-   if(result >= 0){  // GET request
-      //get second group of letters seperate by spaces: 
-      const char delim[2]= " ";
-      char *token; 
-      token = strtok(cMessage, delim); 
-      token = strtok(NULL, delim); 
-      path += token;  
-   } else { //not GET request
-      
-   } 
-   string rootFolder = "web_root";
-   string completePath = rootFolder + path; 
-   if(completePath.substr(completePath.size()-1,1) == "/"){
-      completePath += "index.html";
-   } 
-   return completePath; 
-}
 
 
 // DESCRIPTION: this method takes care of listening for incoming communication
