@@ -1,9 +1,17 @@
 CLIENT = http_cli
+SERVER = http_svr
 
-all: $(CLIENT)
+
+all: $(CLIENT) $(SERVER)
 
 $(CLIENT): $(CLIENT).cpp
-	g++ -g -std=c++11 -g -Wall -Werror -o $@ $^
+	g++ -std=c++11 -g -Wall -Werror -o $@ $^
+
+
+$(SERVER): $(SERVER).cpp
+	g++ -std=c++11 -g -Wall -Werror -o $@ $^
+
+
 
 clean:
 	rm -f *.o $(CLIENT)
