@@ -49,6 +49,8 @@ int main(int argc, char** argv) {
    int sockfd = establishConnection(portno, hostname);
    //communicate with server
    communicate(sockfd, hostname, page);
+   //close socket
+   close(sockfd);
    return 0;
 }
 
@@ -189,7 +191,9 @@ void requestResource(int sockfd, string hostname, string page){
    bzero(buffer,BUFFER_SIZE);
    strcpy(buffer, message.c_str());
    while(n < message.size()){
-      n += send(sockfd,buffer, message.size(),0);
+      //send loop starts at buffer + n (number of bytes received)
+      //assumes that request message is less than or equal to buffer size
+      n += send(sockfd,(buffer+n), message.size(),0);
       if(n<0) {
          cerr << "ERROR: writing to socket" << endl;
       }

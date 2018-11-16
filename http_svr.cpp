@@ -27,14 +27,13 @@ int setUpSocketToListen(int);
 void respondToHTTPrequests(int); 
 void processBuffer(char*);
 void sendMessage(int, string); 
-void sendMessage(int, char*,int);
 string receiveHeader(int); 
 string generateHeader(string, string, string); 
-void sendBody(int, string); 
+void sendResource(int, string); 
 string determineStatusCode(string, string &, string &); 
 bool checkFileExtension(string, string &);
 
-int const BUFFER_SIZE = 1000;
+int const BUFFER_SIZE = 3000;
 
 // DESCRIPTION: the main method uses a command line argument that represents
 // the port number and other methods to communicate with the client. 
@@ -65,8 +64,12 @@ string determineStatusCode(string message, string &revPath, string &contentType)
   if(indexOfFirstLine == string::npos){
       return "400";
   }
+
   string requestLine = message.substr(0,indexOfFirstLine);
-  
+  size_t indexOfHTTPversion = requestLine.find("HTTP/1.1");
+  if(indexOfHTTPversion == string::npos){
+      return "501";
+  }
    char requestLineCharArray[requestLine.size()];
    strcpy(requestLineCharArray, requestLine.c_str());
    char * token;
@@ -123,6 +126,8 @@ string determineStatusCode(string message, string &revPath, string &contentType)
    } 
    return "400";
 } 
+
+
 // DESCRIPTION: this method listens and sends messages to client program
 // INPUT: sockfd- socket 
 // OUPUT:void
@@ -144,7 +149,7 @@ void respondToHTTPrequests(int sockfd){
       string header = generateHeader(path, statusCode,contentType);   
       sendMessage(newsockfd, header);  
       if(strcmp(statusCode.c_str(), "200") == 0){
-         sendBody(newsockfd, path);  
+         sendResource(newsockfd, path);  
       }
       close(newsockfd);
    } 
@@ -214,31 +219,17 @@ string generateHeader(string path, string statusCode, string contentType){
       char buffer2[200];
       strftime(buffer2,200,"%a, %d %h %G %T %Z",ltm2);
       string lastModString(buffer2);
-      response +="200 OK\r\n";
-      response += "Content-Length: ";
-      response += to_string(length);
-      response += "\r\n"; 
-      response += "Date: ";
-      response += currTime;
-      response += "\r\n";
-      response += "Last-Modified: ";
-      response += lastModString;
-      response += "\r\n";
-      response += "Content-Type: "; 
-      response += contentType;
-      response += "\r\n";
+      response += "200 OK\r\n Content-Length: " + to_string(length) + "\r\n" + 
+                  "Date: " + currTime + "\r\nLast-Modified: " + lastModString +
+                  "\r\nContent-Type: " + contentType + "\r\n";
    } else if(strcmp(statusCode.c_str(), "501") == 0){
-      response += "501 Not Implemented\r\n"; 
-      response += "Content-Length: 0\r\n";
+      response += "501 Not Implemented\r\nContent-Length: 0\r\n";
    } else if(strcmp(statusCode.c_str(), "404") == 0){
-      response += "404 Not Found\r\n"; 
-      response += "Content-Length: 0\r\n";
+      response += "404 Not Found\r\nContent-Length: 0\r\n";
     } else if(strcmp(statusCode.c_str(), "400") == 0){
-      response += "400 Bad Request\r\n"; 
-      response += "Content-Length: 0\r\n"; 
+      response += "400 Bad Request\r\nContent-Length: 0\r\n"; 
   } 
-   response += "Connection: close\r\n";
-   response += "\r\n";
+   response += "Connection: close\r\n\r\n";
    
    return response; 
 }
@@ -247,7 +238,7 @@ string generateHeader(string path, string statusCode, string contentType){
 // client.
 // INPUT: sockfd- socket used to communicate with client
 //       path - path of the resource
-void sendBody(int sockfd, string path){
+void sendResource(int sockfd, string path){
    fstream file;
    char data;
    file.open(path, ios::in | ios::binary);
@@ -263,7 +254,7 @@ void sendBody(int sockfd, string path){
          file.read(&data,1);
       }
    } else {
-      cerr << "couln't open file" << endl;
+      cerr << "ERROR: couln't open file" << endl;
       exit(0);
    }
 
@@ -346,20 +337,3 @@ void sendMessage(int sockfd, string message){
    }
 
 }
-
-
-// DESCRIPTION: this mehtod sends a message to the client. 
-// INPUT: sockfd - socket used to communicate
-//       message - message that will be sent to client
-// OUTPUT: void 
-void sendMessage(int sockfd, char* buffer, int size){
-   int n =0;
-   while(n < size){ 
-      n += write(sockfd,(buffer+n), 1); 
-      if(n<0) {
-         cerr << "ERROR: writing to socket" << endl;
-         exit(0);
-      }
-   }
-}
-
