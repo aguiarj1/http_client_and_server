@@ -1,7 +1,7 @@
 // AUTHOR: Joel Aguiar
 // FILENAME: http_svr.cpp
 // DATE: 11/14/18
-// REVISION HISTORY: submitted draft
+// REVISION HISTORY: submitted version
 // REFERENCES: n/a
 //
 // DESCRIPTION: This is a http server program that communicates with a http 
@@ -20,6 +20,7 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <ctime>
+#include <vector>
 
 using namespace std; 
 
@@ -30,8 +31,10 @@ void sendMessage(int, string);
 string receiveHeader(int); 
 string generateHeader(string, string, string); 
 void sendResource(int, string); 
-string determineStatusCode(string, string &, string &); 
+string determineStatusCode(vector <string>, string &, string &); 
 bool checkFileExtension(string, string &);
+vector <string> parseRequestHeader(string);
+
 
 int const BUFFER_SIZE = 3000;
 
@@ -51,81 +54,88 @@ int main(int argc, char** argv) {
    return 0;
 }
 
-
-// DESCRIPTION: This method parses the request line and determines what is the 
-// appropriate http reponse code. 
-// INPUT: message - contains the whole request header
-//       revPath - a string that represents the path of the resource
-//       contentType - the content type is parsed from the path
-// OUTPUT: a string that represents the numberical response code
-string determineStatusCode(string message, string &revPath, string &contentType){
-  //get the request line
-  size_t indexOfFirstLine = message.find("\r\n");
-  if(indexOfFirstLine == string::npos){
-      return "400";
-  }
-
-  string requestLine = message.substr(0,indexOfFirstLine);
-  size_t indexOfHTTPversion = requestLine.find("HTTP/1.1");
-  if(indexOfHTTPversion == string::npos){
-      return "501";
-  }
+// DESCRIPTION: This method reads in a request message and parses the first
+// line. It puts the results in a vector.
+// INPUT: message - contains the whole request message
+// OUTPUT: vector<string> - containing the values in the frist line
+vector <string> parseRequestHeader(string message){
+   vector<string> result;
+   size_t indexOfFirstLine = message.find("\r\n");
+   if(indexOfFirstLine == string::npos){
+      return result;
+   }
+   string requestLine = message.substr(0,indexOfFirstLine);
+   
    char requestLineCharArray[requestLine.size()];
    strcpy(requestLineCharArray, requestLine.c_str());
    char * token;
    token = strtok(requestLineCharArray, " "); 
-   int countOfTokens =0; 
    while(token != NULL){
-      if(countOfTokens ==0){ 
-         //check if it a GET command
-         if(strcmp(token, "GET") != 0){ 
-            // not implemented
-            return "501";
-         }
-      } else if(countOfTokens ==1){  
-         //check valid uri
-         struct stat info;
-         string path(token);
-         if(path.find("/../") != string::npos){
-            return "400";
-         }
-         char lastValue = path.at(path.length()-1);  
-         revPath = "web_root" + path; 
-         char cRevPath[revPath.size()];
-         strcpy(cRevPath, revPath.c_str()); 
-         if(stat(cRevPath, &info) != 0){ //verifies it can read the path
-            return "404";
-         } else {
-            if((info.st_mode & S_IFMT) == S_IFREG) {
-               //check to see if it is a file ext supported
-               if(checkFileExtension(path, contentType)){
-                  return "200";
-               } else {
-                  return "501"; //not implemented for that file type
-               }
-            } else { //it is a file path 
-               if(lastValue == '/'){
-                  revPath = revPath + "index.html";
-               } else {
-                  revPath = revPath + "/index.html";
-               }
-               struct stat info2;
-               char secondRevPath[revPath.size()];
-               strcpy(secondRevPath, revPath.c_str()); 
-               if(stat(secondRevPath, &info2) != 0){ //verify correct path
-                  return "404";
-               } else {
-                  contentType = "text/html";
-                  return "200";
-               }
-            }  
-         }
-      }
-      countOfTokens++; 
+      result.push_back(token); 
       token = strtok(NULL, " "); 
+   }
+   return result; 
+}
+
+
+// DESCRIPTION: This method parses the request line and determines what is the 
+// appropriate http reponse code. 
+// INPUT: message - contains the first line of the request message in a vector
+//       path - a string that represents the path of the resource
+//       contentType - the content type is parsed from the path
+// OUTPUT: a string that represents the numberical response code
+string determineStatusCode(vector <string> message, string &path, 
+                           string &contentType){
+   //check to make sure it has the correct amount of values
+   if(message.size() != 3){
+      return "400";
+   }
+  //check if it a GET command
+  if(message.at(0) !=  "GET"){ 
+      // not implemented
+      return "501";
+  }
+  //check to see if it has invalid /../
+  if(message.at(1).find("/../") != string::npos){
+      return "400";
+  }
+  //check proper HTTP version
+  if(message.at(2) != "HTTP/1.1"){
+      return "501"; 
+  }
+
+   path = message.at(1);
+   //check if the path is referencing a folder path
+   if(path.find(".") == string::npos){
+      char lastValue = path.at(path.length()-1);
+      //if folder, add the index.html to the path
+      if(lastValue == '/'){
+         path += "index.html";
+      } else { 
+         path += "/index.html";
+      } 
+   }
+   path = "web_root" + path; 
+   struct stat info;
+   //check to see if it is a valid file
+   char cRevPath[path.size()];
+   strcpy(cRevPath, path.c_str()); 
+   if(stat(cRevPath, &info) != 0){ //verifies it can read the path
+      return "404";
+   } else {
+      if((info.st_mode & S_IFMT) == S_IFREG) {
+         //check to see if it is a file ext supported
+         if(checkFileExtension(path, contentType)){
+            return "200";
+         } else {
+            return "501"; //not implemented for that file type
+         }
+      } else { //it is not a regular file, so no support
+         return "501";     
+            
+      }  
    } 
-   return "400";
-} 
+}
 
 
 // DESCRIPTION: this method listens and sends messages to client program
@@ -145,7 +155,9 @@ void respondToHTTPrequests(int sockfd){
       cerr << requestHeader << endl; 
       string path;
       string contentType;
-      string statusCode = determineStatusCode(requestHeader,path,contentType); 
+      vector <string> requestLineElements;
+      requestLineElements = parseRequestHeader(requestHeader);
+      string statusCode = determineStatusCode(requestLineElements,path,contentType); 
       string header = generateHeader(path, statusCode,contentType);   
       sendMessage(newsockfd, header);  
       if(strcmp(statusCode.c_str(), "200") == 0){
@@ -219,7 +231,7 @@ string generateHeader(string path, string statusCode, string contentType){
       char buffer2[200];
       strftime(buffer2,200,"%a, %d %h %G %T %Z",ltm2);
       string lastModString(buffer2);
-      response += "200 OK\r\n Content-Length: " + to_string(length) + "\r\n" + 
+      response += "200 OK\r\nContent-Length: " + to_string(length) + "\r\n" + 
                   "Date: " + currTime + "\r\nLast-Modified: " + lastModString +
                   "\r\nContent-Type: " + contentType + "\r\n";
    } else if(strcmp(statusCode.c_str(), "501") == 0){
@@ -259,8 +271,6 @@ void sendResource(int sockfd, string path){
    }
 
 }
-
-
 
 // DESCRIPTION: this method takes care of listening for incoming communication
 // and parsing the message. 
