@@ -1,7 +1,7 @@
 // AUTHOR: Joel Aguiar
 // FILENAME: http_cli.cpp
-// DATE: 10/27/18
-// REVISION HISTORY: submitted draft
+// DATE: 11/15/18
+// REVISION HISTORY: revised draft after first submission
 // REFERENCES: n/a
 //
 // DESCRIPTION: This is a client http program that communicates with a web 
